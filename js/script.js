@@ -34,24 +34,34 @@ function getSelectedTopics() {
     );
 }
 
-// Fetch news articles from the API
+// Fetch news articles from the API for multiple topics
 async function fetchNews(page = 1) {
-    const topicsQuery = selectedTopics.length ? selectedTopics.join(",") : "general";
-    const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
-    const url = `https://newsapi.org/v2/everything?q=${topicsQuery}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=10`;
+    if (!selectedTopics.length) selectedTopics = ["general"]; // Default to "general" if no topics are selected
+    const allArticles = [];
 
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.articles;
+    // Fetch news for each selected topic
+    for (const topic of selectedTopics) {
+        const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
+        const url = `https://newsapi.org/v2/everything?q=${topic}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=5`; // Fetch 5 articles per topic
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            allArticles.push(...data.articles.map((article) => ({ ...article, topic }))); // Attach the topic to each article
+        } catch (error) {
+            console.error(`Error fetching news for topic: ${topic}`, error);
+        }
+    }
+    return allArticles;
 }
 
 // Render news cards
 function renderNews(articles) {
     articles.forEach((article) => {
-        const { title, description, urlToImage, url, source } = article;
-
-        // Determine the badge topic and color
-        const topic = selectedTopics.length ? selectedTopics[0] : "general"; // Use the first selected topic or default
+        const { title, description, urlToImage, url, source, topic } = article;
+        if(title=="[Removed]"){
+            return;
+        }
+        // Get the badge color for the topic
         const badgeColor = topicColors[topic] || "light";
 
         const card = document.createElement("div");
@@ -67,7 +77,7 @@ function renderNews(articles) {
                     <a href="${url}" target="_blank" class="btn btn-secondary continue-reading-btn d-none">Continue Reading</a>
                 </div>
                 <div class="card-footer">
-                    <small class="text-muted">Source: ${source.name}</small>
+                    <small class="text-muted">Source: ${source ? source.name : "Unknown"}</small>
                 </div>
             </div>
         `;
