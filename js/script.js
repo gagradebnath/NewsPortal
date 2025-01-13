@@ -1,0 +1,125 @@
+const API_KEYS = {
+    newsapi: "0b43b29770ff4805bb2cf7ae0c106967",
+    currentsapi: "gda2sqMv6H2xCiJ_FMnmQM5siAym8M7JJ8a81oaxniq2Az80",
+    themoviedb: "70b549b6a701a9ecee91b03187be7b39",
+};
+
+// Topic colors mapping
+const topicColors = {
+    soccer: "success",
+    sports: "primary",
+    celebrity: "warning",
+    hollywood: "info",
+    war: "danger",
+    bangladesh: "dark",
+    africa: "secondary",
+    politics: "danger",
+    tech: "primary",
+    general: "light", // Default color for general topics
+};
+
+const newsContainer = document.getElementById("news-container");
+const refreshButton = document.getElementById("refresh-btn");
+const loadMoreButton = document.getElementById("load-more-btn");
+const searchBar = document.getElementById("search-bar");
+
+let selectedTopics = [];
+let searchQuery = "";
+let currentPage = 1;
+
+// Get selected topics from the dropdown
+function getSelectedTopics() {
+    selectedTopics = Array.from(document.querySelectorAll(".form-check-input:checked")).map(
+        (checkbox) => checkbox.value
+    );
+}
+
+// Fetch news articles from the API
+async function fetchNews(page = 1) {
+    const topicsQuery = selectedTopics.length ? selectedTopics.join(",") : "general";
+    const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
+    const url = `https://newsapi.org/v2/everything?q=${topicsQuery}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=10`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.articles;
+}
+
+// Render news cards
+function renderNews(articles) {
+    articles.forEach((article) => {
+        const { title, description, urlToImage, url, source } = article;
+
+        // Determine the badge topic and color
+        const topic = selectedTopics.length ? selectedTopics[0] : "general"; // Use the first selected topic or default
+        const badgeColor = topicColors[topic] || "light";
+
+        const card = document.createElement("div");
+        card.className = "col-md-4 col-sm-12";
+        card.innerHTML = `
+            <div class="card h-100">
+                <img src="${urlToImage || 'dummy-image.jpg'}" class="card-img-top card-thumbnail" alt="News Image">
+                <div class="card-body">
+                    <span class="badge bg-${badgeColor} mb-2">${topic.toUpperCase()}</span>
+                    <h5 class="card-title">${title}</h5>
+                    <p class="card-text card-short-desc">${description ? description.slice(0, 100) + "..." : "No description available."}</p>
+                    <button class="btn btn-primary read-more-btn">Read More</button>
+                    <a href="${url}" target="_blank" class="btn btn-secondary continue-reading-btn d-none">Continue Reading</a>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">Source: ${source.name}</small>
+                </div>
+            </div>
+        `;
+
+        newsContainer.appendChild(card);
+
+        // Add event listener for "Read More" button
+        card.querySelector(".read-more-btn").addEventListener("click", (event) => {
+            const button = event.target;
+            const cardBody = button.closest(".card-body");
+            const img = card.querySelector(".card-thumbnail");
+            const continueReadingBtn = cardBody.querySelector(".continue-reading-btn");
+
+            if (button.textContent === "Read More") {
+                // Expand card
+                cardBody.querySelector(".card-text").textContent = description || "No description available.";
+                img.style.height = "auto";
+                button.textContent = "Collapse";
+                continueReadingBtn.classList.remove("d-none");
+            } else {
+                // Collapse card
+                cardBody.querySelector(".card-text").textContent = description
+                    ? description.slice(0, 100) + "..."
+                    : "No description available.";
+                img.style.height = "150px";
+                button.textContent = "Read More";
+                continueReadingBtn.classList.add("d-none");
+            }
+        });
+    });
+}
+
+// Load initial news
+async function loadNews() {
+    const news = await fetchNews(currentPage);
+    renderNews(news);
+    currentPage++;
+}
+
+// Refresh news on button click
+refreshButton.addEventListener("click", async () => {
+    getSelectedTopics();
+    searchQuery = searchBar.value;
+    currentPage = 1;
+    newsContainer.innerHTML = "";
+    await loadNews();
+});
+
+// Load more news on button click
+loadMoreButton.addEventListener("click", loadNews);
+
+// Initial load
+window.addEventListener("DOMContentLoaded", () => {
+    loadNews();
+});

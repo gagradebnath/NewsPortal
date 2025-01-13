@@ -1,0 +1,102 @@
+/* General Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+}
+
+header {
+    background-color: #008080;
+    color: white;
+}
+
+header input {
+    max-width: 400px;
+}
+
+.card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: scale(1.05);
+}
+
+.card img {
+    height: 150px;
+    object-fit: cover;
+}
+
+.badge {
+    font-size: 0.8rem;
+}
+
+.bg-teal {
+    background-color: #008080 !important;
+}
+
+.text-teal {
+    color: #008080 !important;
+}
+
+/* Beautify Dropdown */
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+}
+
+.dropdown-menu li {
+    padding: 8px 12px;
+}
+
+.dropdown-menu li:hover {
+    background-color: #f0f8f8;
+}
+
+.form-check-input {
+    margin-right: 10px;
+    accent-color: #008080; /* Teal color for checkbox */
+}
+
+.dropdown-toggle {
+    background-color: #004444;
+    border-color: #00423b;
+    color: white;
+}
+
+.dropdown-toggle:hover {
+    background-color: #00714a;
+    color: white;
+}
+
+/* Customizing Read More Button */
+.read-more-btn {
+    background-color: #005f5f; /* Dark teal */
+    border-color: #005f5f;
+    color: white;
+}
+
+.read-more-btn:hover {
+    background-color: #004848; /* Darker teal on hover */
+    color: white;
+}
+
+/* Customizing General Badge */
+.badge.bg-light {
+    background-color: #cce7e7 !important; /* Light teal */
+    color: #005f5f !important; /* Dark teal text */
+}
+
+/* Customizing Refresh Button */
+#refresh-btn {
+    background-color: #004444; /* Teal */
+    border-color: #004444;
+    color: white;
+}
+
+#refresh-btn:hover {
+    background-color: #00714a; /* Darker teal on hover */
+    color: white;
+}
