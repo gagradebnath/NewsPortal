@@ -1,7 +1,7 @@
 const API_KEYS = {
     newsapi: "0b43b29770ff4805bb2cf7ae0c106967",
     currentsapi: "gda2sqMv6H2xCiJ_FMnmQM5siAym8M7JJ8a81oaxniq2Az80",
-    themoviedb: "70b549b6a701a9ecee91b03187be7b39",
+    guardianapi: "851166fa-3136-4aae-9964-d51c6031886e",
 };
 
 // Topic colors mapping
@@ -34,33 +34,126 @@ function getSelectedTopics() {
     );
 }
 
-// Fetch news articles from the API for multiple topics
-async function fetchNews(page = 1) {
+// Fetch news articles from NewsAPI
+async function fetchFromNewsAPI(topic, page) {
+    const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
+    const url = `https://newsapi.org/v2/everything?q=${topic}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=5`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.articles) {
+            return data.articles.map((article) => ({
+                title: article.title,
+                description: article.description,
+                url: article.url,
+                source: { name: article.source.name || "Unknown" },
+                image: article.urlToImage,
+                topic,
+            }));
+        }
+    } catch (error) {
+        console.error(`NewsAPI failed for topic: ${topic}`, error);
+    }
+    return []; // Return an empty array if NewsAPI fails
+}
+
+// Fetch news articles from CurrentsAPI
+async function fetchFromCurrentsAPI(topic) {
+    const searchQueryParam = searchQuery ? `&keywords=${searchQuery}` : "";
+    const url = `https://api.currentsapi.services/v1/search?category=${topic}${searchQueryParam}&apiKey=${API_KEYS.currentsapi}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.news) {
+            return data.news.map((article) => ({
+                title: article.title,
+                description: article.description,
+                url: article.url,
+                source: { name: article.author || "Unknown" },
+                image: article.image,
+                topic,
+            }));
+        }
+    } catch (error) {
+        console.error(`CurrentsAPI failed for topic: ${topic}`, error);
+    }
+    return []; // Return an empty array if CurrentsAPI fails
+}
+
+// Fetch news articles from Guardian API
+async function fetchFromGuardianAPI(topic, page) {
+    const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
+    const sectionParam = topic !== "general" ? `&section=${topic}` : "";
+    const url = `https://content.guardianapis.com/search?api-key=${API_KEYS.guardianapi}${sectionParam}${searchQueryParam}&page=${page}&page-size=5`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.response && data.response.results) {
+            return data.response.results.map((article) => ({
+                title: article.webTitle,
+                description: "No description available.",
+                url: article.webUrl,
+                source: { name: "The Guardian" },
+                image: null,
+                topic: article.sectionName,
+            }));
+        }
+    } catch (error) {
+        console.error(`Guardian API failed for topic: ${topic}`, error);
+    }
+
+    return []; // Return an empty array if Guardian API fails
+}
+
+// Fetch combined news articles from all APIs
+async function fetchNews(page = 2) {
     if (!selectedTopics.length) selectedTopics = ["general"]; // Default to "general" if no topics are selected
     const allArticles = [];
 
-    // Fetch news for each selected topic
     for (const topic of selectedTopics) {
-        const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
-        const url = `https://newsapi.org/v2/everything?q=${topic}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=5`; // Fetch 5 articles per topic
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            allArticles.push(...data.articles.map((article) => ({ ...article, topic }))); // Attach the topic to each article
-        } catch (error) {
-            console.error(`Error fetching news for topic: ${topic}`, error);
+        // Ensure each API result is an array
+
+
+
+        
+        const [newsAPIArticles = [], currentsAPIArticles = [], guardianAPIArticles = []] = await Promise.all([
+            fetchFromNewsAPI(topic, page),
+            fetchFromCurrentsAPI(topic),
+            fetchFromGuardianAPI(topic, page),
+        ]);
+
+        console.log(newsAPIArticles.length, currentsAPIArticles.length, guardianAPIArticles.length);
+        if(newsAPIArticles.length==0 ){
+            console.log("News API failed");
+            allArticles.push(...newsAPIArticles, ...currentsAPIArticles, ...guardianAPIArticles);
         }
+        else {
+            console.log("News API success");
+            allArticles.push(...newsAPIArticles);
+        }
+        // console.log(newsAPIArticles, currentsAPIArticles, guardianAPIArticles);
+        // Combine articles from all APIs
     }
+
+    if (!allArticles.length) {
+        newsContainer.innerHTML = `<p class="text-center text-muted">No news articles found for the selected topics and search query.</p>`;
+    }
+
     return allArticles;
 }
 
 // Render news cards
 function renderNews(articles) {
     articles.forEach((article) => {
-        const { title, description, urlToImage, url, source, topic } = article;
-        if(title=="[Removed]"){
-            return;
-        }
+        const { title, description, url, source, topic, image } = article;
+
+        // Use image if available, otherwise use a placeholder
+        const imageUrl = (image&&image!="None")? image : "placeholder-image.jpg"; // Replace 'placeholder-image.jpg' with your default image path
+
         // Get the badge color for the topic
         const badgeColor = topicColors[topic] || "light";
 
@@ -68,7 +161,7 @@ function renderNews(articles) {
         card.className = "col-md-4 col-sm-12";
         card.innerHTML = `
             <div class="card h-100">
-                <img src="${urlToImage || 'dummy-image.jpg'}" class="card-img-top card-thumbnail" alt="News Image">
+                <img src="${imageUrl}" class="card-img-top card-thumbnail" alt="News Image">
                 <div class="card-body">
                     <span class="badge bg-${badgeColor} mb-2">${topic.toUpperCase()}</span>
                     <h5 class="card-title">${title}</h5>
@@ -120,10 +213,15 @@ async function loadNews() {
 // Refresh news on button click
 refreshButton.addEventListener("click", async () => {
     getSelectedTopics();
-    searchQuery = searchBar.value;
+    searchQuery = searchBar.value.trim(); // Update search query
     currentPage = 1;
-    newsContainer.innerHTML = "";
+    newsContainer.innerHTML = ""; // Clear old results
     await loadNews();
+});
+
+// Update search query dynamically
+searchBar.addEventListener("input", (event) => {
+    searchQuery = event.target.value.trim();
 });
 
 // Load more news on button click
