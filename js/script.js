@@ -61,7 +61,7 @@ async function fetchFromNewsAPI(topic, page, apiBackUp ="7d0ac580c68349508f2a7c8
 
          console.error(`NewsAPI failed for topic 1: ${topic}`, error);
          try {
-            const response = await fetch(url2);
+            const response = await fetch(url1);
     
             const data = await response.json();
     
