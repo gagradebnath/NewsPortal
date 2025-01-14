@@ -1,5 +1,6 @@
 const API_KEYS = {
-    newsapi: "0b43b29770ff4805bb2cf7ae0c106967",
+    newsapi: "7d0ac580c68349508f2a7c84918cc7ae",
+    newsapi2: "0b43b29770ff4805bb2cf7ae0c106967",
     currentsapi: "gda2sqMv6H2xCiJ_FMnmQM5siAym8M7JJ8a81oaxniq2Az80",
     guardianapi: "851166fa-3136-4aae-9964-d51c6031886e",
 };
@@ -35,13 +36,16 @@ function getSelectedTopics() {
 }
 
 // Fetch news articles from NewsAPI
-async function fetchFromNewsAPI(topic, page) {
+async function fetchFromNewsAPI(topic, page, apiBackUp ="7d0ac580c68349508f2a7c84918cc7ae") {
     const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
     const url = `https://newsapi.org/v2/everything?q=${topic}${searchQueryParam}&apiKey=${API_KEYS.newsapi}&page=${page}&pageSize=5`;
-
+    const url1 = `https://newsapi.org/v2/everything?q=${topic}${searchQueryParam}&apiKey=${API_KEYS.newsapi2}&page=${page}&pageSize=5`;
+    
     try {
         const response = await fetch(url);
+
         const data = await response.json();
+
         if (data.articles) {
             return data.articles.map((article) => ({
                 title: article.title,
@@ -52,8 +56,31 @@ async function fetchFromNewsAPI(topic, page) {
                 topic,
             }));
         }
-    } catch (error) {
-        console.error(`NewsAPI failed for topic: ${topic}`, error);
+    }    
+    catch (error) {
+
+         console.error(`NewsAPI failed for topic 1: ${topic}`, error);
+         try {
+            const response = await fetch(url2);
+    
+            const data = await response.json();
+    
+            if (data.articles) {
+                return data.articles.map((article) => ({
+                    title: article.title,
+                    description: article.description,
+                    url: article.url,
+                    source: { name: article.source.name || "Unknown" },
+                    image: article.urlToImage,
+                    topic,
+                }));
+            }
+        }    
+        catch (error) {
+            console.error(`NewsAPI failed for topic 2: ${topic}`, error);
+            
+        }
+        
     }
     return []; // Return an empty array if NewsAPI fails
 }
@@ -84,6 +111,9 @@ async function fetchFromCurrentsAPI(topic) {
 
 // Fetch news articles from Guardian API
 async function fetchFromGuardianAPI(topic, page) {
+    if(topic=="soccer"||topic=="Soccer"){
+        topic = "football"
+    }
     const searchQueryParam = searchQuery ? `&q=${searchQuery}` : "";
     const sectionParam = topic !== "general" ? `&section=${topic}` : "";
     const url = `https://content.guardianapis.com/search?api-key=${API_KEYS.guardianapi}${sectionParam}${searchQueryParam}&page=${page}&page-size=5`;
@@ -150,7 +180,7 @@ async function fetchNews(page = 2) {
 function renderNews(articles) {
     articles.forEach((article) => {
         const { title, description, url, source, topic, image } = article;
-
+        
         // Use image if available, otherwise use a placeholder
         const imageUrl = (image&&image!="None")? image : "placeholder-image.jpg"; // Replace 'placeholder-image.jpg' with your default image path
 
@@ -175,7 +205,10 @@ function renderNews(articles) {
             </div>
         `;
 
-        newsContainer.appendChild(card);
+        if(title!="[Removed]"){
+            
+            newsContainer.appendChild(card);
+        }
 
         // Add event listener for "Read More" button
         card.querySelector(".read-more-btn").addEventListener("click", (event) => {
